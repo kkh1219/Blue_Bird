@@ -1,0 +1,172 @@
+package minigame;
+
+import javax.swing.*;
+import javax.swing.Timer;
+
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+
+public class BurgerGameUI extends JFrame {
+    private JLabel hamsterImageLabel;
+    private JLabel moneyLabel;
+    private JLabel timeLabel;
+    private JLabel orderLabel;
+    private JTextArea selectedIngredientsArea;
+    private JButton[] ingredientButtons;
+    private JButton submitButton;
+    private JButton undoButton;
+
+    private java.util.List<String> selectedIngredients = new ArrayList<>();
+    private java.util.List<String> currentOrder;
+
+    private int money = 0;
+    private int timeLeft = 60;
+    private Timer gameTimer;
+    private Timer countdownTimer;
+
+    public BurgerGameUI() {
+        setTitle("햄버거 만들기 게임");
+        setSize(1000, 500);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        setupTopPanel();
+        setupMiddlePanel();
+        setupBottomPanel();
+        setupGameLogic();
+
+        setVisible(true);
+    }
+
+    private void setupTopPanel() {
+    	JPanel topPanel = new JPanel(new BorderLayout());
+
+    	//왼쪽: 시간    
+    	timeLabel = new JLabel("남은 시간: 60초");
+    	timeLabel.setFont(new Font("돋움", Font.BOLD, 16));
+    	timeLabel.setPreferredSize(new Dimension(150, 50));
+    	topPanel.add(timeLabel, BorderLayout.WEST);
+
+    	//중앙: 햄스터 이미지
+    	JPanel imagePanel = new JPanel();
+    	imagePanel.setPreferredSize(new Dimension(350, 350));
+    	ImageIcon hamsterIcon = new ImageIcon(getClass().getResource("/minigame/Hamster_young01.png"));
+    	Image scaledImage = hamsterIcon.getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH);
+    	hamsterIcon = new ImageIcon(scaledImage);
+    	hamsterImageLabel = new JLabel(hamsterIcon);
+    	imagePanel.add(hamsterImageLabel);
+    	topPanel.add(imagePanel, BorderLayout.CENTER);
+
+    	// 오른쪽: 돈
+    	moneyLabel = new JLabel("현재 금액: 0원");
+    	moneyLabel.setFont(new Font("돋움", Font.BOLD, 16));
+    	moneyLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+    	moneyLabel.setPreferredSize(new Dimension(200, 50));
+    	topPanel.add(moneyLabel, BorderLayout.EAST);
+
+    	// 아래: 주문 표시
+    	orderLabel = new JLabel("주문: ");
+    	orderLabel.setHorizontalAlignment(JLabel.CENTER);
+    	topPanel.add(orderLabel, BorderLayout.SOUTH);
+
+    	add(topPanel, BorderLayout.NORTH);
+    }
+
+
+    private void setupMiddlePanel() {
+        JPanel middlePanel = new JPanel();
+
+        String[] ingredients = {"빵", "패티", "새우패티", "양상추", "토마토", "소스", "치즈"};
+        ingredientButtons = new JButton[ingredients.length];
+
+        for (int i = 0; i < ingredients.length; i++) {
+            final String ing = ingredients[i];
+            ingredientButtons[i] = new JButton(ing);
+            ingredientButtons[i].addActionListener(e -> {
+                selectedIngredients.add(ing);
+                updateSelectedArea();
+            });
+            middlePanel.add(ingredientButtons[i]);
+        }
+
+        submitButton = new JButton("제출");
+        submitButton.addActionListener(e -> submitOrder());
+        middlePanel.add(submitButton);
+
+        undoButton = new JButton("지우기");
+        undoButton.addActionListener(e -> {
+            if (!selectedIngredients.isEmpty()) {
+                selectedIngredients.remove(selectedIngredients.size() - 1);
+                updateSelectedArea();
+            }
+        });
+        middlePanel.add(undoButton);
+
+        add(middlePanel, BorderLayout.CENTER);
+    }
+
+    private void setupBottomPanel() {
+        JPanel bottomPanel = new JPanel();
+        selectedIngredientsArea = new JTextArea(2, 40);
+        selectedIngredientsArea.setEditable(false);
+        bottomPanel.add(selectedIngredientsArea);
+        add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private void updateSelectedArea() {
+        selectedIngredientsArea.setText("내 재료: " + String.join(", ", selectedIngredients));
+    }
+
+    private void submitOrder() {
+        if (selectedIngredients.equals(currentOrder)) {
+            money += 4000;
+            moneyLabel.setText("현재 금액: " + money + "원");
+            selectedIngredients.clear();
+            updateSelectedArea();
+
+            // 주문 완료 시 1초 뒤 다음 주문 생성 (제출 성공 시에만)
+            Timer delayTimer = new Timer(100, e -> generateNewOrder());
+            delayTimer.setRepeats(false);
+            delayTimer.start();
+        } else {
+            selectedIngredientsArea.setText("틀렸습니다! 다시 시도하세요.");
+        }
+    }
+
+    private void setupGameLogic() {
+        generateNewOrder();
+
+        // 제한 시간 60초
+        countdownTimer = new Timer(1000, e -> {
+            timeLeft--;
+            timeLabel.setText("남은 시간: " + timeLeft + "초");
+
+            if (timeLeft <= 0) {
+                ((Timer) e.getSource()).stop();
+                JOptionPane.showMessageDialog(this, "게임 종료! 총 번 돈: " + money + "원");
+                System.exit(0);
+            }
+        });
+        countdownTimer.start();
+    }
+
+    private void generateNewOrder() {
+        String[][] exampleOrders = {
+            {"빵", "패티","소스", "빵"},
+            {"빵", "패티", "치즈","소스", "빵"},
+            {"빵", "패티", "양상추", "소스", "빵"},
+            {"빵","패티","토마토","양상추","소스","빵"},
+            {"빵","패티","토마토","양상추","치즈","소스","빵"},
+            {"빵","새우패티","소스","빵"},
+            {"빵","새우패티","치즈","소스","빵"},
+            {"빵","새우패티","양상추","소스","빵"},
+            {"빵","새우패티","토마토","양상추","소스","빵"},
+            {"빵","새우패티","토마토","양상추","치즈","소스","빵"}
+        };
+        currentOrder = Arrays.asList(exampleOrders[new Random().nextInt(exampleOrders.length)]);
+        orderLabel.setText("주문: " + String.join(", ", currentOrder));
+        selectedIngredients.clear();
+        updateSelectedArea();
+    }
+}
